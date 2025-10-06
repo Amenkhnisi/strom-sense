@@ -1,0 +1,13 @@
+services:
+  ocr-service:
+    build: energy-bill-ocr
+    container_name: energy-bill-ocr
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./energy-bill-ocr:/app
+      - ./energy-bill-ocr/uploads:/app/uploads
+      - ./energy-bill-ocr/output:/app/output
+    environment:
+      - TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
+    restart: always
