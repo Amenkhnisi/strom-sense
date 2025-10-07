@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-from routes import ocr_pdf
+from routes import ocr_pdf, ocr_image
 import pytesseract
 from models import HealthResponse
 
@@ -32,6 +32,7 @@ app.add_middleware(
 )
 # add routes
 app.include_router(ocr_pdf.route)
+app.include_router(ocr_image.route)
 
 
 @app.on_event("startup")
