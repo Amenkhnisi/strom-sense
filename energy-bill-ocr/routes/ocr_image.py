@@ -1,29 +1,27 @@
 from fastapi import APIRouter,  UploadFile, File, HTTPException
 from models import OCRResponse
-import os
-import tempfile
 from datetime import datetime
 import uuid
-from utils.Tesseract_config import ALLOWED_PDF_EXTENSION
+from utils.Tesseract_config import ALLOWED_IMAGE_EXTENSIONS
 from utils.utility_functions import validate_file_extension, validate_file_size, logger
-from services.ocr import extract_text_from_pdf
 from services.parser import parse_energy_invoice
+from services.ocr import extract_text_from_image
 from models import ParsedInvoiceData
 
 route = APIRouter(prefix="/ocr")
 
 
-@route.post("/pdf", response_model=OCRResponse)
-async def ocr_pdf(
-    file: UploadFile = File(..., description="PDF file to process"),
+@route.post("/image", response_model=OCRResponse)
+async def ocr_image(
+    file: UploadFile = File(..., description="Image file to process"),
     preprocess: bool = True
 ):
     """
-    Extract text from PDF and parse energy bill data
+    Extract text from image and parse energy bill data
 
     Args:
-        file: PDF file upload
-        preprocess: Whether to preprocess images (default: True)
+        file: Image file upload (JPG, PNG, BMP, TIFF)
+        preprocess: Whether to preprocess image (default: True)
 
     Returns:
         OCRResponse with parsed invoice data
@@ -31,12 +29,10 @@ async def ocr_pdf(
     request_id = str(uuid.uuid4())
     start_time = datetime.now()
 
-    logger.info(f"[{request_id}] Received PDF OCR request: {file.filename}")
+    logger.info(f"[{request_id}] Received image OCR request: {file.filename}")
 
     # Validate file extension
-    validate_file_extension(file.filename, {ALLOWED_PDF_EXTENSION})
-
-    tmp_file_path = None
+    validate_file_extension(file.filename, ALLOWED_IMAGE_EXTENSIONS)
 
     try:
         # Read file and validate size
@@ -45,14 +41,9 @@ async def ocr_pdf(
 
         logger.info(f"[{request_id}] File size: {len(content)/1024:.2f} KB")
 
-        # Save to temporary file
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
-            tmp_file.write(content)
-            tmp_file_path = tmp_file.name
-
         # Extract text
         logger.info(f"[{request_id}] Starting OCR processing")
-        raw_text = extract_text_from_pdf(tmp_file_path, preprocess=preprocess)
+        raw_text = extract_text_from_image(content, preprocess=preprocess)
 
         # Parse invoice
         logger.info(f"[{request_id}] Parsing invoice data")
@@ -77,19 +68,10 @@ async def ocr_pdf(
         raise
     except Exception as e:
         logger.error(
-            f"[{request_id}] Error processing PDF: {e}", exc_info=True)
+            f"[{request_id}] Error processing image: {e}", exc_info=True)
         return OCRResponse(
             success=False,
             request_id=request_id,
             timestamp=datetime.now().isoformat(),
             error=str(e)
         )
-    finally:
-        # Cleanup temporary file
-        if tmp_file_path and os.path.exists(tmp_file_path):
-            try:
-                os.unlink(tmp_file_path)
-                logger.debug(f"[{request_id}] Temporary file cleaned up")
-            except Exception as e:
-                logger.warning(
-                    f"[{request_id}] Failed to cleanup temp file: {e}")

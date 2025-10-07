@@ -1,6 +1,6 @@
 import pytesseract
 from pdf2image import convert_from_path
-from PIL import Image
+from PIL import Image, ImageEnhance
 import io
 import logging
 from utils.Tesseract_config import TESSERACT_CONFIG
@@ -32,10 +32,14 @@ def extract_text_from_pdf(pdf_path: str, preprocess: bool = True) -> str:
         # Convert PDF to images (300 DPI for better quality)
         images = convert_from_path(
             pdf_path,
-            dpi=300,
+            dpi=200,
             fmt='jpeg',
             thread_count=2
         )
+
+        # 2. Process only first page for multi-page bills
+        images = convert_from_path(
+            pdf_path, dpi=300, first_page=1, last_page=1)
 
         logger.info(f"PDF converted to {len(images)} page(s)")
 
@@ -77,7 +81,10 @@ def extract_text_from_image(image_bytes: bytes, preprocess: bool = True) -> str:
     """
     try:
         logger.info("Loading image from bytes")
+
         image = Image.open(io.BytesIO(image_bytes))
+        image = ImageEnhance.Contrast(image).enhance(2)
+        image = ImageEnhance.Sharpness(image).enhance(2)
 
         logger.info(f"Image loaded: {image.size} pixels, mode: {image.mode}")
 
