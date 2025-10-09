@@ -1,13 +1,13 @@
 
 from fastapi import APIRouter, Body
-from models import OCRResponse
+from schemas import OCRResponse
 from datetime import datetime
 import uuid
-from utils.utility_functions import logger
-from services.parser import parse_energy_invoice
-from models import ParsedInvoiceData, ParseTextRequest
+from utils.utility_functions import logger, to_parsed_invoice_model
+from services.parser_patterns import parse_invoice_text
+from schemas import ParseTextRequest
 
-route = APIRouter(prefix="/ocr")
+route = APIRouter(prefix="/ocr", tags=["OCR"])
 
 
 @route.post("/parse-text", response_model=OCRResponse)
@@ -31,7 +31,7 @@ async def parse_text(request: ParseTextRequest = Body(...)):
     try:
         # Parse invoice
         logger.info(f"[{request_id}] Parsing invoice data")
-        parsed_data = parse_energy_invoice(request.text)
+        parsed_data = parse_invoice_text(request.text)
 
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -44,7 +44,7 @@ async def parse_text(request: ParseTextRequest = Body(...)):
             request_id=request_id,
             timestamp=datetime.now().isoformat(),
             raw_text=request.text,
-            parsed_data=ParsedInvoiceData(**parsed_data),
+            parsed_data=to_parsed_invoice_model(parsed_data),
             processing_time_ms=processing_time
         )
 

@@ -4,6 +4,10 @@ from PIL import Image, ImageEnhance
 import os
 import logging
 from .Tesseract_config import MAX_FILE_SIZE
+from schemas import ParsedInvoiceData, FieldValue, BillingPeriod
+from datetime import datetime
+from typing import Union
+
 
 # Configure logging
 logging.basicConfig(
@@ -57,3 +61,52 @@ def preprocess_image(image: Image.Image) -> Image.Image:
         logger.warning(
             f"Image preprocessing failed: {e}. Using original image.")
         return image
+
+
+def to_parsed_invoice_model(parsed_dict: dict) -> ParsedInvoiceData:
+    supplier = parsed_dict.get("supplier", "UNKNOWN")
+
+    # If already flat → return directly
+    if "fields" not in parsed_dict:
+        return ParsedInvoiceData(**parsed_dict)
+
+    field_values = {
+        key: val for key, val in parsed_dict["fields"].items()
+        if isinstance(val, dict)
+    }
+
+    return ParsedInvoiceData(supplier=supplier, **field_values)
+
+
+def normalize_field(field: Union[FieldValue, None], expected_type: str):
+    if not field or not field.normalized:
+        return None
+
+    value = field.normalized
+
+    if expected_type == "date":
+        if isinstance(value, str):
+            try:
+                return datetime.strptime(value, "%d.%m.%Y").date()
+            except ValueError:
+                return None
+        return value
+
+    if expected_type == "float":
+        if isinstance(value, str):
+            try:
+                return float(value.replace(",", ".").replace("€", "").strip())
+            except ValueError:
+                return None
+        return value
+
+    if expected_type == "billing_period":
+        if isinstance(value, dict):
+            start = normalize_field(FieldValue(
+                normalized=value.get("start_date")), "date")
+            end = normalize_field(FieldValue(
+                normalized=value.get("end_date")), "date")
+            return start, end
+        return None, None
+
+    return value

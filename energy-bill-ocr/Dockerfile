@@ -6,7 +6,8 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-deu \
     libtesseract-dev \
     poppler-utils \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    inotify-tools
 
 # Set working directory
 WORKDIR /app
@@ -15,7 +16,14 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Alembic 
+RUN pip install alembic
+COPY alembic.ini .
+COPY alembic/ ./alembic/
+
+
 # Copy application code
+COPY start.sh /start.sh
 COPY . .
 
 # Create uploads directory
@@ -25,4 +33,4 @@ RUN mkdir -p /app/uploads
 EXPOSE 8000
 
 # Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/start.sh"]

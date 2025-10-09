@@ -1,54 +1,43 @@
-from pydantic import BaseModel, Field
-from typing import Optional, List
-
-# Pydantic Models
+from sqlalchemy import Column, Integer, String, Float, Date, JSON
+from database import Base
 
 
-class ParseTextRequest(BaseModel):
-    text: str = Field(..., description="Raw text to parse", min_length=10)
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    hashed_password = Column(String, nullable=False)
 
 
-class BillingPeriod(BaseModel):
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+class Invoice(Base):
+    __tablename__ = "invoices"
 
+    id = Column(Integer, primary_key=True, index=True)
+    supplier = Column(String, nullable=False)
+    supplier_raw = Column(String)
+    supplier_confidence = Column(Float)
 
-class NextInstallment(BaseModel):
-    date: Optional[str] = None
-    amount: Optional[str] = None
+    customer_id = Column(String)
+    customer_raw = Column(String)
+    customer_confidence = Column(Float)
 
+    billing_start = Column(Date)
+    billing_end = Column(Date)
+    billing_raw = Column(String)
+    billing_confidence = Column(Float)
 
-class ParsedInvoiceData(BaseModel):
-    supplierName: Optional[str] = None
-    customerId: Optional[str] = None
-    meterNumber: Optional[str] = None
-    billingPeriod: Optional[BillingPeriod] = None
-    totalConsumption: Optional[str] = None
-    netAmount: Optional[str] = None
-    vatAmount: Optional[str] = None
-    totalAmount: Optional[str] = None
-    paymentsMade: Optional[str] = None
-    balance: Optional[str] = None
-    balanceType: Optional[str] = None
-    nextInstallment: Optional[NextInstallment] = None
-    workPrice: Optional[str] = None
-    basicFee: Optional[str] = None
-    vatRate: Optional[str] = None
+    total_consumption = Column(Float)
+    consumption_raw = Column(String)
+    consumption_confidence = Column(Float)
 
+    total_amount = Column(Float)
+    amount_raw = Column(String)
+    amount_confidence = Column(Float)
 
-class OCRResponse(BaseModel):
-    success: bool
-    request_id: str
-    timestamp: str
-    raw_text: Optional[str] = None
-    parsed_data: Optional[ParsedInvoiceData] = None
-    processing_time_ms: Optional[float] = None
-    error: Optional[str] = None
+    issue_date = Column(Date)
+    issue_raw = Column(String)
+    issue_confidence = Column(Float)
 
-
-class HealthResponse(BaseModel):
-    service: str
-    version: str
-    status: str
-    tesseract_version: str
-    supported_languages: List[str]
+    additional_fields = Column(JSON)

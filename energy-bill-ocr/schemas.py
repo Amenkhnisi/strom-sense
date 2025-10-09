@@ -1,8 +1,31 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any,  List
+from pydantic import BaseModel, Field, EmailStr, constr, field_validator
+from typing import Optional, Dict, Any,  List, Annotated
 from datetime import date
+import re
+from fastapi import HTTPException
+
 
 # Pydantic Models
+
+class UserResponse(BaseModel):
+    username: str
+    email: EmailStr
+
+
+class UserCreate(BaseModel):
+    username: Annotated[str, constr(min_length=8, max_length=16)]
+    email: EmailStr
+    password: Annotated[str, constr(min_length=8, max_length=72)]
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: Annotated[str, constr(min_length=8, max_length=72)]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
 
 
 class ParseTextRequest(BaseModel):

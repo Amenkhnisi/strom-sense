@@ -1,19 +1,20 @@
-from fastapi import APIRouter,  UploadFile, File, HTTPException
-from models import OCRResponse
+from fastapi import APIRouter,  UploadFile, File, HTTPException, Depends
+from schemas import OCRResponse
 from datetime import datetime
 import uuid
 from utils.Tesseract_config import ALLOWED_IMAGE_EXTENSIONS
-from utils.utility_functions import validate_file_extension, validate_file_size, logger
-from services.parser import parse_energy_invoice
+from utils.utility_functions import validate_file_extension, validate_file_size, logger, to_parsed_invoice_model
 from services.ocr import extract_text_from_image
-from models import ParsedInvoiceData
-
-route = APIRouter(prefix="/ocr")
+from services.parser_patterns import parse_invoice_text
 
 
-@route.post("/image", response_model=OCRResponse)
+route = APIRouter(prefix="/ocr", tags=["OCR"])
+
+
+@route.post("/image", response_model=OCRResponse,)
 async def ocr_image(
-    file: UploadFile = File(..., description="Image file to process"),
+    file: UploadFile = File(...,
+                            description="Image file to process"),
     preprocess: bool = True
 ):
     """
@@ -47,7 +48,8 @@ async def ocr_image(
 
         # Parse invoice
         logger.info(f"[{request_id}] Parsing invoice data")
-        parsed_data = parse_energy_invoice(raw_text)
+        parsed_data = parse_invoice_text(raw_text)
+        print(parsed_data)
 
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -60,7 +62,7 @@ async def ocr_image(
             request_id=request_id,
             timestamp=datetime.now().isoformat(),
             raw_text=raw_text,
-            parsed_data=ParsedInvoiceData(**parsed_data),
+            parsed_data=to_parsed_invoice_model(parsed_data),
             processing_time_ms=processing_time
         )
 
