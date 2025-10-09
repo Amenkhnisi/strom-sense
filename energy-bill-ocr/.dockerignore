@@ -1,0 +1,44 @@
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.sqlite3
+
+# Alembic cache
+alembic/versions/__pycache__/
+
+# Environment and secrets
+.env
+*.secret
+*.pem
+*.key
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Git and version control
+.git/
+.gitignore
+
+# Tests and coverage
+tests/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Node or frontend artifacts (if present)
+node_modules/
+dist/
+build/
+*.lock

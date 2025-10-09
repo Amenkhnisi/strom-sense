@@ -1,16 +1,15 @@
 from fastapi import APIRouter,  UploadFile, File, HTTPException
-from models import OCRResponse
+from schemas import OCRResponse
 import os
 import tempfile
 from datetime import datetime
 import uuid
 from utils.Tesseract_config import ALLOWED_PDF_EXTENSION
-from utils.utility_functions import validate_file_extension, validate_file_size, logger
+from utils.utility_functions import validate_file_extension, validate_file_size, logger, to_parsed_invoice_model
 from services.ocr import extract_text_from_pdf
-from services.parser import parse_energy_invoice
-from models import ParsedInvoiceData
+from services.parser_patterns import parse_invoice_text
 
-route = APIRouter(prefix="/ocr")
+route = APIRouter(prefix="/ocr", tags=["OCR"])
 
 
 @route.post("/pdf", response_model=OCRResponse)
@@ -56,7 +55,7 @@ async def ocr_pdf(
 
         # Parse invoice
         logger.info(f"[{request_id}] Parsing invoice data")
-        parsed_data = parse_energy_invoice(raw_text)
+        parsed_data = parse_invoice_text(raw_text)
 
         # Calculate processing time
         processing_time = (datetime.now() - start_time).total_seconds() * 1000
@@ -69,7 +68,7 @@ async def ocr_pdf(
             request_id=request_id,
             timestamp=datetime.now().isoformat(),
             raw_text=raw_text,
-            parsed_data=ParsedInvoiceData(**parsed_data),
+            parsed_data=to_parsed_invoice_model(parsed_data),
             processing_time_ms=processing_time
         )
 

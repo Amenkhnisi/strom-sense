@@ -1,9 +1,15 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Request, Depends
 import logging
-from routes import ocr_pdf, ocr_image, ocr_text
+from routes import ocr_pdf, ocr_image, ocr_text, invoice, auth
 import pytesseract
-from models import HealthResponse
+from schemas import HealthResponse
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasicCredentials
+from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
+import os
 
 
 # Configure logging
@@ -13,14 +19,53 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+ENV = os.environ.get("ENV")
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Energy Bill OCR Service",
     description="Microservice for extracting and parsing German energy bills using Tesseract OCR",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    docs_url="/docs" if ENV == "dev" else None,
+    redoc_url="/redoc" if ENV == "dev" else None
+
 )
+
+# Protect routes
+
+
+""" @app.get("/docs", include_in_schema=False)
+def get_documentation(username: str = Depends(verify_credentials)):
+    return get_swagger_ui_html(
+        openapi_url="/openapi.json",
+        title="API Docs"
+    )
+
+
+@app.get("/redoc", include_in_schema=False)
+def get_redoc(username: str = Depends(verify_credentials)):
+    return get_redoc_html(
+        openapi_url="/openapi.json",
+        title="ReDoc"
+    )
+
+
+@app.get("/openapi.json", include_in_schema=False)
+def get_openapi(credentials: HTTPBasicCredentials = Depends(verify_credentials)):
+    return app.openapi()
+ """
+# Global exception handler
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 
 # Add CORS middleware
 app.add_middleware(
@@ -34,6 +79,8 @@ app.add_middleware(
 app.include_router(ocr_pdf.route)
 app.include_router(ocr_image.route)
 app.include_router(ocr_text.route)
+app.include_router(invoice.route)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")
