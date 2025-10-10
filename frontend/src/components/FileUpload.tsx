@@ -6,6 +6,7 @@ import { Toaster, toast } from "sonner";
 
 interface FileUploadProps {
     onFileSelect: (file: File) => void;
+
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
@@ -55,11 +56,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
     };
 
     const handleClick = () => fileInputRef.current?.click()
-    const handleRemove = () => {
-        setSelectedFile(null);
-        setPreviewUrl(null);
-        toast.success("File removed successfully!");
-    };
+    /*  const handleRemove = () => {
+         setSelectedFile(null);
+         setPreviewUrl(null);
+         toast.success("File removed successfully!");
+     }; */
 
     return (
         <div
@@ -92,7 +93,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect }) => {
                     </p>
                     <button
                         type="button"
-                        onClick={handleRemove}
                         className="flex items-center gap-1 text-red-500 hover:text-red-600 text-sm"
                     >
                         <X className="w-4 h-4" />
