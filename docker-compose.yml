@@ -4,20 +4,19 @@ networks:
 
 services:
   ocr-service:
-    build: energy-bill-ocr
+    build: backend
     env_file:
-      - ./energy-bill-ocr/.env
+      - ./backend/.env
     depends_on:
       - db
-    container_name: energy-bill-ocr
+    container_name: ocr-backend
     networks:
       - energy_net
     ports:
       - "8000:8000"
     volumes:
-      - ./energy-bill-ocr:/app
-      - ./energy-bill-ocr/uploads:/app/uploads
-      - ./energy-bill-ocr/output:/app/output
+      - ./backend/src:/app/src
+      - ./backend/src/uploads:/app/src/uploads
     environment:
       - TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
     restart: always
@@ -27,7 +26,7 @@ services:
     restart: always
     container_name: EnergyDb
     env_file:
-      - ./energy-bill-ocr/.env
+      - ./backend/.env
     networks:
       - energy_net
     ports:
