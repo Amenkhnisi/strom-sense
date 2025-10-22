@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Response, HTTPException
 from sqlalchemy.orm import Session
-from src.database.core import get_db
+from database.core import get_db
 from .models import UserCreate, UserLogin
 from .service import register_user, authenticate_user, create_access_token
 import logging
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 def register(user: UserCreate, db: Session = Depends(get_db)):
     try:
         new_user = register_user(user, db)
-        return {"message": "User registered", "id": new_user.id}
+        return {"message": "User registered", "id": new_user.user_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

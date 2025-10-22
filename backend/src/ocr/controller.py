@@ -1,202 +1,160 @@
-from fastapi import APIRouter, Depends, APIRouter,  UploadFile, File, HTTPException, Body, Request
+"""
+API routes for bill-related operations
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from .models import ParsedInvoiceData, ParseTextRequest
-from .service import save_invoice_to_db
-from src.database.core import get_db
-from .models import OCRResponse
-from datetime import datetime
-from src.ocr.utils.Tesseract_config import ALLOWED_IMAGE_EXTENSIONS, ALLOWED_PDF_EXTENSION
-from src.ocr.utils.utility_functions import validate_file_extension, validate_file_size, to_parsed_invoice_model
-from src.ocr.utils.ocr import extract_text_from_image, extract_text_from_pdf
-from src.ocr.utils.parser_patterns import parse_invoice_text, detect_supplier
-import os
-import uuid
-import shutil
-from typing import Dict
-import logging
-from src.rate_limiter import limiter
+from typing import List
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+from database.core import get_db
+from entities import UserBill, BillMetrics
+from .models import (
+    UserBillCreate,
+    UserBillResponse,
+    UserBillWithMetrics,
+    BillMetricsResponse
 )
-logger = logging.getLogger(__name__)
-
-router = APIRouter(prefix="/ocr", tags=["OCR"])
+from .service import MetricsService
 
 
-UPLOAD_DIR = "uploads"
-EXTENSION_ROUTE_MAP: Dict[str, str] = {
-    ".pdf": "pdf",
-    ".png": "image",
-    ".jpg": "image",
-    ".jpeg": "image",
-    ".txt": "text"
-}
-# Save bill data
+router = APIRouter(
+    prefix="/bills",
+    tags=["Bills"]
+)
 
 
-@router.post("/save-invoice")
-def save_invoice(data: ParsedInvoiceData, db: Session = Depends(get_db)):
-    invoice = save_invoice_to_db(data, db)
-    return {"message": "Invoice saved", "id": invoice.id}
-
-# OCR
-
-
-@router.post("/upload-bill", response_model=OCRResponse,)
-@limiter.limit("5/hour")
-async def parse_bill(request: Request,
-                     file: UploadFile = File(..., description="file to process"), preprocess: bool = True
-                     ):
+@router.post("/", response_model=UserBillResponse, status_code=status.HTTP_201_CREATED)
+def create_bill(
+    bill_data: UserBillCreate,
+    db: Session = Depends(get_db)
+):
     """
-    Extract text from file and parse energy bill data
-
-    Args:
-        file: file upload (JPG, pdf, BMP, png ,jpeg)
-        preprocess: Whether to preprocess image (default: True)
-
-    Returns:
-        OCRResponse with parsed invoice data
+    Create a new bill (from OCR extraction)
     """
-    request_id = str(uuid.uuid4())
-    start_time = datetime.now()
+    # Create bill
+    bill = UserBill(**bill_data.dict())
+    db.add(bill)
+    db.commit()
+    db.refresh(bill)
 
-    logger.info(f"[{request_id}] Received file OCR request: {file.filename}")
+    # Calculate metrics automatically
+    metrics_service = MetricsService(db)
+    metrics_service.calculate_for_bill(bill.id)
 
-    # Save uploaded file
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    return bill
 
-    # Determine file type based on file extension
-    ext = os.path.splitext(file.filename)[1].lower()
-    file_type = EXTENSION_ROUTE_MAP.get(ext)
 
-    if not file_type:
+@router.get("/{bill_id}", response_model=UserBillWithMetrics)
+def get_bill(
+    bill_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get a bill by ID with its metrics
+    """
+    bill = db.query(UserBill).filter(UserBill.id == bill_id).first()
+
+    if not bill:
         raise HTTPException(
-            status_code=400, detail=f"Unsupported file type: {ext}")
-
-    # Forward to appropriate OCR route
-
-    try:
-        # Read file and validate size
-
-        # Extract text
-        logger.info(f"[{request_id}] Starting OCR processing")
-
-        if file_type == "image":
-            logger.info(
-                f"[{request_id}] Received image OCR request: {file.filename}")
-            # Validate file extension
-            validate_file_extension(file.filename, ALLOWED_IMAGE_EXTENSIONS)
-            await file.seek(0)
-            content = await file.read()
-            validate_file_size(len(content))
-            logger.info(
-                f"[{request_id}] File size: {len(content)/1024:.2f} KB")
-            raw_text = extract_text_from_image(content, preprocess=preprocess)
-
-        elif file_type == "pdf":
-            logger.info(
-                f"[{request_id}] Received PDF OCR request: {file.filename}")
-            # Validate file extension
-            validate_file_extension(file.filename, {ALLOWED_PDF_EXTENSION})
-            raw_text = extract_text_from_pdf(file_path, preprocess=preprocess)
-
-        # Parse invoice
-        logger.info(f"[{request_id}] Parsing invoice data")
-        supplier = detect_supplier(raw_text)
-        if supplier == 'UNKNOWN':
-            raise HTTPException(
-                status_code=500, detail="Unable to detect Supplier name , Please upload a correct bill or change the file ")
-        parsed_data = parse_invoice_text(raw_text)
-
-        # Calculate processing time
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
-
-        logger.info(
-            f"[{request_id}] Processing completed in {processing_time:.2f}ms")
-
-        return OCRResponse(
-            success=True,
-            request_id=request_id,
-            timestamp=datetime.now().isoformat(),
-            raw_text=raw_text,
-            parsed_data=to_parsed_invoice_model(parsed_data),
-            processing_time_ms=processing_time
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Bill with ID {bill_id} not found"
         )
 
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            f"[{request_id}] Error processing image: {e}", exc_info=True)
-        return OCRResponse(
-            success=False,
-            request_id=request_id,
-            timestamp=datetime.now().isoformat(),
-            error=str(e)
-        )
-    finally:
-        # Cleanup temporary file
-        if file_path and os.path.exists(file_path):
-            try:
-                os.unlink(file_path)
-                logger.debug(f"[{request_id}] Temporary file cleaned up")
-            except Exception as e:
-                logger.warning(
-                    f"[{request_id}] Failed to cleanup temp file: {e}")
+    # Get metrics
+    metrics = db.query(BillMetrics).filter(
+        BillMetrics.bill_id == bill_id).first()
+
+    # Convert to response model
+    bill_dict = UserBillResponse.model_validate(
+        bill).model_dump()
+    bill_dict["metrics"] = BillMetricsResponse.model_validate(
+        metrics).model_dump(exclude={"difference_kwh", "yoy_consumption_change_percent"}) if metrics else None
+
+    return bill_dict
 
 
-# OCR text
-
-
-@router.post("/text", response_model=OCRResponse)
-async def parse_text(request: ParseTextRequest = Body(...)):
+@router.get("/user/{user_id}", response_model=List[UserBillResponse])
+def get_user_bills(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
     """
-    Parse already extracted text (no OCR needed)
-    Useful when you already have the text and just need parsing
-
-    Args:
-        request: ParseTextRequest with raw text
-
-    Returns:
-        OCRResponse with parsed invoice data
+    Get all bills for a specific user
     """
-    request_id = str(uuid.uuid4())
-    start_time = datetime.now()
+    bills = db.query(UserBill).filter(
+        UserBill.user_id == user_id
+    ).order_by(UserBill.bill_year.desc()).all()
 
-    logger.info(
-        f"[{request_id}] Received text parsing request ({len(request.text)} characters)")
-
-    try:
-        # Parse invoice
-        logger.info(f"[{request_id}] Parsing invoice data")
-        parsed_data = parse_invoice_text(request.text)
-
-        # Calculate processing time
-        processing_time = (datetime.now() - start_time).total_seconds() * 1000
-
-        logger.info(
-            f"[{request_id}] Parsing completed in {processing_time:.2f}ms")
-
-        return OCRResponse(
-            success=True,
-            request_id=request_id,
-            timestamp=datetime.now().isoformat(),
-            raw_text=request.text,
-            parsed_data=to_parsed_invoice_model(parsed_data),
-            processing_time_ms=processing_time
+    if not bills:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No bills found for user {user_id}"
         )
 
-    except Exception as e:
-        logger.error(f"[{request_id}] Error parsing text: {e}", exc_info=True)
-        return OCRResponse(
-            success=False,
-            request_id=request_id,
-            timestamp=datetime.now().isoformat(),
-            error=str(e)
+    return bills
+
+
+@router.post("/{bill_id}/calculate-metrics", response_model=BillMetricsResponse)
+def calculate_bill_metrics(
+    bill_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Calculate or recalculate metrics for a specific bill
+    """
+    metrics_service = MetricsService(db)
+    metrics = metrics_service.calculate_for_bill(bill_id)
+
+    if not metrics:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Bill with ID {bill_id} not found"
         )
+
+    return metrics
+
+
+@router.get("/{bill_id}/metrics", response_model=BillMetricsResponse)
+def get_bill_metrics(
+    bill_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get calculated metrics for a bill
+    """
+    metrics = db.query(BillMetrics).filter(
+        BillMetrics.bill_id == bill_id).first()
+
+    if not metrics:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No metrics found for bill {bill_id}. Try calculating them first."
+        )
+
+    return metrics
+
+
+@router.delete("/{bill_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_bill(
+    bill_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a bill and its associated metrics
+    """
+    bill = db.query(UserBill).filter(UserBill.id == bill_id).first()
+
+    if not bill:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Bill with ID {bill_id} not found"
+        )
+
+    # Delete associated metrics first (if any)
+    db.query(BillMetrics).filter(BillMetrics.bill_id == bill_id).delete()
+
+    # Delete bill
+    db.delete(bill)
+    db.commit()
+
+    return None

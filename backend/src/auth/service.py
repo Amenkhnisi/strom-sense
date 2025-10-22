@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from src.entities.user import User
+from entities import UserProfile as User
 from .models import UserCreate, UserLogin
 from passlib.context import CryptContext
 from jose import jwt
@@ -45,11 +45,7 @@ def register_user(user: UserCreate, db: Session):
 
     if len(user.username) < 8:
         raise HTTPException(
-            status_code=400, detail="Username must be at least 8 characters")
-
-    if db.query(User).filter(User.username == user.username).first():
-        raise HTTPException(
-            status_code=400, detail="Username already registered")
+            status_code=400, detail="Username must be at least 6 characters")
 
     if not re.match(r".+\.[a-zA-Z]{2,3}$", user.email):
         raise HTTPException(
@@ -65,7 +61,7 @@ def register_user(user: UserCreate, db: Session):
             status_code=400, detail="Password too long. Max 72 characters allowed.")
 
     new_user = User(username=user.username, email=user.email,
-                    hashed_password=hashed)
+                    hashed_password=hashed, postal_code=user.postal_code, created_at=datetime.now(timezone.utc))
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
@@ -74,7 +70,8 @@ def register_user(user: UserCreate, db: Session):
 
 # Authenticate User
 def authenticate_user(user: UserLogin, db: Session):
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(User).filter(
+        User.email == user.email).first()
     if not db_user or not verify_password(user.password, db_user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return db_user

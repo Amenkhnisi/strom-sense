@@ -3,9 +3,10 @@ from sqlalchemy import engine_from_config, pool
 from alembic import context
 
 # ✅ Import your Base and models
-from src.database.core import Base
-from src.entities.ocr import Invoice  # import all models here
-from src.entities.user import User
+from database.core import Base
+from entities.ocr import UserBill  # import all models here
+from entities.user import UserProfile
+from entities.anomaly_detection import BillMetrics, AnomalyDetection, WeatherCache, PeerStatistics
 from dotenv import load_dotenv
 import os
 
