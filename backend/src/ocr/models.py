@@ -1,47 +1,67 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any,  List
-from datetime import date
-
-# Pydantic Models
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from typing import Optional, List, Union
+from datetime import date, datetime
 
 
-class ParseTextRequest(BaseModel):
-    text: str = Field(..., description="Raw text to parse", min_length=10)
+class UserBillCreate(BaseModel):
+    user_id: int
+    bill_year: int = Field(..., ge=2000, le=2100)
+    consumption_kwh: float = Field(..., gt=0)
+    total_cost_euros: float = Field(..., gt=0)
+    billing_start_date: date
+    billing_end_date: date
+    tariff_rate: Optional[float] = Field(None, gt=0)
+
+    @field_validator('billing_end_date')
+    def end_after_start(cls, v, info: ValidationInfo):
+        start_date = info.data.get('billing_start_date')
+        if start_date and v <= start_date:
+            raise ValueError(
+                'Billing end date must be after billing start date')
+        return v
 
 
-class FieldValue(BaseModel):
-    raw: Optional[str]
-    normalized: Optional[Any]
-    confidence: float = Field(0.0, ge=0.0, le=1.0)
+class UserBillResponse(BaseModel):
+    id: int
+    user_id: int
+    bill_year: int
+    consumption_kwh: float
+    total_cost_euros: float
+    billing_start_date: date
+    billing_end_date: date
+    tariff_rate: Optional[float]
+    uploaded_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
-class BillingPeriod(BaseModel):
-    start_date: Optional[date]
-    end_date: Optional[date]
+# ============= BILL METRICS SCHEMAS =============
+
+class BillMetricsResponse(BaseModel):
+    id: int
+    bill_id: int
+    days_in_billing_period: int
+    daily_avg_consumption_kwh: float
+    cost_per_kwh: float
+    yoy_consumption_change_percent: Optional[Union[float, str]]
+    previous_year_consumption_kwh: Optional[Union[float,
+                                                  str]]
+    difference_kwh: Optional[Union[float, str]] = 0.0
+    calculated_at: Optional[datetime]
+
+    model_config = {
+        "from_attributes": True
+    }
 
 
-class ParsedInvoiceData(BaseModel):
-    supplier: str
-    supplierName: Optional[FieldValue]
-    customerId: Optional[FieldValue]
-    contractNumber: Optional[FieldValue]
-    invoiceId: Optional[FieldValue]
-    meterNumber: Optional[FieldValue]
-    billingPeriod: Optional[FieldValue]
-    totalConsumption: Optional[FieldValue]
-    totalAmount: Optional[FieldValue]
-    issueDate: Optional[FieldValue]
-    additionalFields: Optional[Dict[str, FieldValue]] = {}
+# ============= COMBINED RESPONSE SCHEMAS =============
 
+class UserBillWithMetrics(UserBillResponse):
+    """Bill with calculated metrics"""
+    metrics: Optional[dict] = None
 
-class OCRResponse(BaseModel):
-    success: bool
-    request_id: str
-    timestamp: str
-    raw_text: Optional[str] = None
-    parsed_data: Optional[ParsedInvoiceData] = None
-    processing_time_ms: Optional[float] = None
-    error: Optional[str] = None
+# ============= HEALTH CHECK SCHEMA =============
 
 
 class HealthResponse(BaseModel):
