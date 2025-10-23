@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from api import register_routes
 from sqlalchemy.orm import Session
-from database.core import get_db
+from database import get_db
 
 
 app = FastAPI(title="AI-Powered Home Energy Optimizer", version="1.0.0")
@@ -37,7 +37,7 @@ def health_check(db: Session = Depends(get_db)):
     """
     try:
         # Test database query
-        from src.entities.user import UserProfile
+        from entities import UserProfile
         user_count = db.query(UserProfile).count()
 
         return {

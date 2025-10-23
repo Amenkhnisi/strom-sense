@@ -1,6 +1,6 @@
 from .models import (
     AnomalyDetectionResponse,
-    WeatherCacheResponse, PeerStatisticsResponse
+    PeerStatisticsResponse
 )
 
 __all__ = [

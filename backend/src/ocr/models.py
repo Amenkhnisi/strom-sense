@@ -32,8 +32,9 @@ class UserBillResponse(BaseModel):
     tariff_rate: Optional[float]
     uploaded_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True
+    }
 
 
 # ============= BILL METRICS SCHEMAS =============

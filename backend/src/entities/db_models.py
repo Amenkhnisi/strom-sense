@@ -1,8 +1,7 @@
 from sqlalchemy import Column, Integer, Float, DateTime, ForeignKey, String, Boolean, Text, Date
-from database.core import Base
+from database import Base
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
-from sqlalchemy.orm import relationship
 
 
 ## Bill Metrics Entity ##

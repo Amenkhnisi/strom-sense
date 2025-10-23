@@ -2,7 +2,7 @@ import os
 import shutil
 import subprocess
 from sqlalchemy import create_engine
-from database.core import Base, engine  # your declarative base
+from database import Base, engine  # your declarative base
 
 ALEMBIC_VERSIONS_DIR = os.path.join("alembic", "versions")
 
