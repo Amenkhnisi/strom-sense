@@ -7,7 +7,7 @@ from entities import UserBill, UserProfile, BillMetrics
 from .models import UserProfileCreate, UserProfileUpdate, OverallSummary
 
 
-from database.core import get_db
+from database import get_db
 from jose import jwt, JWTError
 from dotenv import load_dotenv
 import os

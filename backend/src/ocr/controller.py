@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 
-from database.core import get_db
+from database import get_db
 from entities import UserBill, BillMetrics
 from .models import (
     UserBillCreate,
