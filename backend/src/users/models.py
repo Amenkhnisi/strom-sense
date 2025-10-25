@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
-from src.AnomalyDetection.models import AnomalyDetectionResponse
+from src.AnomalyDetection.schemas import AnomalyDetectionResponse
 from src.ocr.models import UserBillResponse
 
 

@@ -67,6 +67,9 @@ class AnomalyDetection(Base):
     is_dismissed = Column(Boolean, default=False)
     dismissed_at = Column(DateTime, nullable=True)
 
+    # User feedback on the anomaly (optional)
+    user_feedback = Column(Text, nullable=True)
+
     # Relationships
     user = relationship("UserProfile", back_populates="anomalies")
     bill = relationship("UserBill", back_populates="anomalies")
@@ -103,6 +106,15 @@ class PeerStatistics(Base):
     sample_size = Column(Integer, nullable=False)
     avg_consumption_kwh = Column(Float, nullable=False)
     std_dev_consumption_kwh = Column(Float, nullable=False)
+    median_consumption_kwh = Column(Float, nullable=False)
+
+    # Percentiles
+    percentile_25_kwh = Column(Float, nullable=False)
+    percentile_75_kwh = Column(Float, nullable=False)
+
+    # Cost statistics
+    avg_cost_euros = Column(Float, nullable=True)
+    avg_cost_per_kwh = Column(Float, nullable=True)
 
     calculated_at = Column(DateTime, default=datetime.now(timezone.utc))
 

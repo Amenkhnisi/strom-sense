@@ -24,6 +24,7 @@ class AnomalyDetectionResponse(BaseModel):
     recommendations_text: Optional[str]
     estimated_extra_cost_euros: Optional[float]
     is_dismissed: bool
+    user_feedback: Optional[str]
 
     class Config:
         from_attributes = True
@@ -32,22 +33,6 @@ class AnomalyDetectionResponse(BaseModel):
 class AnomalyDismissRequest(BaseModel):
     """Request to dismiss an anomaly alert"""
     pass
-
-
-# ============= PEER STATISTICS SCHEMAS =============
-
-class PeerStatisticsResponse(BaseModel):
-    id: int
-    household_size: int
-    property_type: Optional[str]
-    year: int
-    sample_size: int
-    avg_consumption_kwh: float
-    std_dev_consumption_kwh: float
-    calculated_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 # ============= COMBINED RESPONSE SCHEMAS =============

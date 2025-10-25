@@ -75,7 +75,7 @@ class WeatherService:
     def _get_from_cache(self, postal_code: str, year: int) -> Optional[WeatherCache]:
         """Get weather data from cache"""
         return self.db.query(WeatherCache).filter(
-            WeatherCache.postal_code == postal_code,
+            WeatherCache.postal_code == str(postal_code),
             WeatherCache.year == year
         ).first()
 
@@ -333,7 +333,7 @@ class WeatherService:
         query = self.db.query(WeatherCache)
 
         if postal_code:
-            query = query.filter(WeatherCache.postal_code == postal_code)
+            query = query.filter(WeatherCache.postal_code == str(postal_code))
         if year:
             query = query.filter(WeatherCache.year == year)
 
