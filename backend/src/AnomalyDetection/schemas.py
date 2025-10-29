@@ -32,6 +32,7 @@ class AnomalyDetectionResponse(BaseModel):
 
 class AnomalyDismissRequest(BaseModel):
     """Request to dismiss an anomaly alert"""
+    feedback: Optional[str] = None
     pass
 
 

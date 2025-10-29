@@ -17,10 +17,10 @@ class UserProfileCreate(BaseModel):
 
 
 class UserProfileUpdate(BaseModel):
-    email: Optional[EmailStr]
-    username: Optional[str] = Field(..., min_length=3, max_length=50)
-    hashed_password: Optional[str] = Field(..., min_length=8)
-    postal_code: Optional[int] = Field(..., ge=10000, le=99999)
+    email: Optional[EmailStr] = None
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    hashed_password: Optional[str] = Field(None, min_length=8)
+    postal_code: Optional[int] = Field(None, ge=10000, le=99999)
     household_size: Optional[int] = Field(None, ge=1, le=10)
     property_type: Optional[str] = Field(None, pattern="^(apartment|house)$")
     property_size_sqm: Optional[float] = Field(None, gt=0)
