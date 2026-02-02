@@ -126,7 +126,7 @@ class UserProfile(Base):
 
     user_id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
-    username = Column(String(50), unique=True, nullable=False, index=True)
+    username = Column(String(50), unique=False, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     postal_code = Column(Integer, nullable=False, index=True)
     household_size = Column(Integer, nullable=True)  # 1, 2, 3, 4, 5+

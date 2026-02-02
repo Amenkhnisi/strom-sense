@@ -6,8 +6,8 @@ RUN apt-get update && apt-get install -y \
     tesseract-ocr-deu \
     libtesseract-dev \
     poppler-utils \
-    && rm -rf /var/lib/apt/lists/* \
-    inotify-tools
+    inotify-tools \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
 WORKDIR /app
@@ -23,12 +23,14 @@ COPY src/alembic/ ./alembic/
 
 
 # Copy application code
-COPY start.sh /start.sh
+COPY start.sh .
 COPY ./src ./src
 
+# Ensure script has Unix line endings and is executable in the image
+RUN sed -i 's/\r$//' ./start.sh && chmod +x ./start.sh
 
-# Create uploads directory
-RUN mkdir -p /src/uploads
+# Create uploads directory in the copied source path
+RUN mkdir -p /app/src/uploads
 
 # Expose port
 EXPOSE 8000
@@ -36,4 +38,4 @@ EXPOSE 8000
 ENV PYTHONPATH=/app/src
 
 # Run the application
-CMD ["/start.sh"]
+CMD ["./start.sh"]

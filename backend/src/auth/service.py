@@ -43,7 +43,7 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
 # Register User
 def register_user(user: UserCreate, db: Session):
 
-    if len(user.username) < 8:
+    if len(user.username) < 6:
         raise HTTPException(
             status_code=400, detail="Username must be at least 6 characters")
 

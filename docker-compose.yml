@@ -6,7 +6,7 @@ services:
   ocr-service:
     build: backend
     env_file:
-      - ./backend/.env
+      - ./.env
     depends_on:
       - db
     container_name: ocr-backend
@@ -26,7 +26,7 @@ services:
     restart: always
     container_name: EnergyDb
     env_file:
-      - ./backend/.env
+      - .env
     networks:
       - energy_net
     ports:
