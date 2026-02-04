@@ -261,7 +261,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-**[API Docs](http://localhost:8000/docs)** | **[Report Bug](https://github.com/Amenkhnisi/strom-sense/issues)** | **[Request Feature](https://github.com/Amenkhnisi/strom-sense/issues)**
+**[API Docs](https://strom-sense.onrender.com/)** | **[Report Bug](https://github.com/Amenkhnisi/strom-sense/issues)** | **[Request Feature](https://github.com/Amenkhnisi/strom-sense/issues)**
 
 Made with ❤️ for the German Energy Market
 
